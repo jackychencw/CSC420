@@ -29,7 +29,7 @@ def sift(img, nfeatures=100, ct = 0.04, et = 5, sigma = 20):
     img = cv2.drawKeypoints(gray, kp, img, flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
     return kp, des, img
 
-def match(kp1, des1, kp2, des2, max_n = 10):
+def match(kp1, des1, kp2, des2, max_n = 12):
     lkp1 = len(kp1)
     lkp2 = len(kp2)
     point_list = []
@@ -46,9 +46,17 @@ def match(kp1, des1, kp2, des2, max_n = 10):
     return point_list[:min(len(point_list), max_n)]
 
 def distance(des1, des2):
+    # L2 Norm
     dis = des1 - des2
     l2norm = np.linalg.norm(dis, 2)
-    return l2norm
+
+    # L1 Norm
+    l1norm = np.linalg.norm(dis, 1)
+
+    # L3 Norm
+    l3norm = np.linalg.norm(dis, 3)
+
+    return l3norm
 
 def concatenate(i1, i2):
     assert i1.shape == i2.shape
@@ -73,12 +81,10 @@ if __name__ == "__main__":
     # Plot keypoints on both images
     a1 = load_color_image("sample1.jpg")
     a2 = load_color_image("sample2.jpg")
-    gray1 = cv2.cvtColor(a1, cv2.COLOR_BGR2GRAY)
-    gray2 = cv2.cvtColor(a2, cv2.COLOR_BGR2GRAY)
+    # gray1 = cv2.cvtColor(a1, cv2.COLOR_BGR2GRAY)
+    # gray2 = cv2.cvtColor(a2, cv2.COLOR_BGR2GRAY)
     test1 = cv2.drawKeypoints(a1, [i[0] for i in r], a1, flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
     test2 = cv2.drawKeypoints(a2, [i[1] for i in r], a2, flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
-    test1_gray = cv2.drawKeypoints(gray1, [i[0] for i in r], a1, flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
-    test2_gray = cv2.drawKeypoints(gray2, [i[1] for i in r], a2, flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
     
     # Concatenate two images
     test = concatenate(test1, test2)
@@ -88,13 +94,8 @@ if __name__ == "__main__":
         c0 = int(i[0].pt[0])
         r1 = int(i[1].pt[1])
         c1 = int(i[1].pt[0]) + horizontal_shift
-        print(r0, c0, r1, c1)
         rr, cc, val = line_aa(r0, c0, r1, c1)
-        print(rr)
-        test[rr, cc] = np.array([0,0,255])
-    save_image("test.jpg", test)
-
-    test_gray = concatenate(test1_gray, test2_gray)
-    save_image("test_gray.jpg", test_gray)
+        test[rr, cc] = np.array([0,255,0])
+    save_image("test_l3norm.jpg", test)
 
     
