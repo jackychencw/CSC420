@@ -3,7 +3,7 @@ import cv2
 import numpy as np
 
 DATA_PATH = "./CSC420-A2/"
-OUTPUT_PATH = "./Output/"
+OUTPUT_PATH = "./Output/2/"
 
 def load_color_image(filename):
     image = cv2.imread(DATA_PATH + filename)
@@ -62,7 +62,50 @@ def harris_corner_detection(img, alpha, threshold):
             img[i_s:i_d,j_s:j_d] = np.array([0,0,255])
     return img
 
-def brown_corner_detection(img, threshold):
+def harris_corner_detection_lambda(img, alpha, threshold):
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    blur = cv2.GaussianBlur(gray,(5,5),7)
+
+    # Compute Ix and Iy
+    Ix = cv2.Sobel(blur, cv2.CV_64F, 1, 0, ksize=5)
+    Iy = cv2.Sobel(blur, cv2.CV_64F, 0, 1, ksize=5)
+
+    # Compute Ix^2, Iy^2 and IxIy
+    IxIy = np.multiply(Ix, Iy)
+    Ix2 = np.multiply(Ix, Ix)
+    Iy2 = np.multiply(Iy, Iy)
+
+    # Blur Ix^2, Iy^2 and IxIy
+    Ix2_blur = cv2.GaussianBlur(Ix2,(5,5),10) 
+    Iy2_blur = cv2.GaussianBlur(Iy2,(5,5),10) 
+    IxIy_blur = cv2.GaussianBlur(IxIy,(5,5),10)
+
+    # Compute r = det - alpha * trace^2
+    lambda1 = Ix2_blur
+    lambda2 = Iy2_blur
+    y = lambda1.shape[0]
+    x = lambda1.shape[1]
+    where_corner = zip(*np.where((lambda1 > threshold) & (lambda2 > threshold)))
+    R = lambda1 + lambda2
+    for corner in where_corner:
+        filter_size = 10
+        i = corner[0]
+        j = corner[1]
+        i_s = max(i - filter_size, 0)
+        i_d = min(y - 1, i + filter_size)
+        j_s = max(j - filter_size, 0)
+        j_d = min(x - 1, j + filter_size)
+        matrix = R[i_s:i_d, j_s:j_d]
+        if matrix.max() == R[i,j]:
+            dot_d = 3
+            i_s = max(i - dot_d, 0)
+            i_d = min(y - 1, i + dot_d)
+            j_s = max(j - dot_d, 0)
+            j_d = min(x - 1, j + dot_d)
+            img[i_s:i_d,j_s:j_d] = np.array([0,0,255])
+    return img
+
+def brown_corner_detection(img):
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     blur = cv2.GaussianBlur(gray,(5,5),7)
 
@@ -90,7 +133,7 @@ def brown_corner_detection(img, threshold):
     # Threshold and non-maximum suppression
     y = hm.shape[0]
     x = hm.shape[1]
-    corner_list = zip(*np.where(hm > threshold))
+    corner_list = zip(*np.where(hm > 1000000))
     for corner in corner_list:
         filter_size = 10
         i = corner[0]
@@ -99,8 +142,8 @@ def brown_corner_detection(img, threshold):
         i_d = min(y - 1, i + filter_size)
         j_s = max(j - filter_size, 0)
         j_d = min(x - 1, j + filter_size)
-        matrix = R[i_s:i_d, j_s:j_d]
-        if matrix.max() == R[i,j]:
+        matrix = hm[i_s:i_d, j_s:j_d]
+        if matrix.max() == hm[i,j]:
             dot_d = 3
             i_s = max(i - dot_d, 0)
             i_d = min(y - 1, i + dot_d)
@@ -121,15 +164,15 @@ def rotateImage(image, angle):
 
 if __name__ == "__main__":
     img = load_color_image("building.jpg")
-    threshold = 10**12
-    haris1 = harris_corner_detection(img, 0.04, threshold)
-    haris2 = harris_corner_detection(img, 0.05, threshold)
-    haris3 = harris_corner_detection(img, 0.06, threshold)
-    save_image("harris1.jpg", haris1)
-    save_image("harris2.jpg", haris2)
-    save_image("harris3.jpg", haris3)
-    brown = brown_corner_detection(img, threshold)
-    save_image("brown.jpg", brown)
-    rotate_60 = rotateImage(img, 60)
-    harris_rotate_60 = harris_corner_detection(rotate_60, 0.06, threshold)
-    save_image("harris rotate 60.jpg", harris_rotate_60)
+    threshold = 10**6
+    haris1 = harris_corner_detection_lambda(img, 0.04, threshold)
+    # haris2 = harris_corner_detection(img, 0.05, threshold)
+    # haris3 = harris_corner_detection(img, 0.06, threshold)
+    save_image("harris1_lambda.jpg", haris1)
+    # save_image("harris2_s1.jpg", haris2)
+    # save_image("harris3_s1.jpg", haris3)
+    # brown = brown_corner_detection(img)
+    # save_image("brown.jpg", brown)
+    # rotate_60 = rotateImage(img, 60)
+    # harris_rotate_60 = harris_corner_detection(rotate_60, 0.06, threshold)
+    # save_image("harris rotate 60.jpg", harris_rotate_60)
