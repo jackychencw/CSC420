@@ -1,6 +1,9 @@
 import matplotlib.pyplot as plt
 import cv2
 import numpy as np
+from scipy.ndimage.filters import gaussian_laplace, minimum_filter
+import math
+import scipy
 
 DATA_PATH = "./CSC420-A2/"
 OUTPUT_PATH = "./Output/2/"
@@ -152,23 +155,92 @@ def brown_corner_detection(img):
             img[i_s:i_d,j_s:j_d] = np.array([0,0,255])
     return img
 
-def LoG():
-    return
+def blob_detection(img, sigmas=[1,2,4,8,16,32,64,128]):
+    scales = [5,10,20, 30,40, 80, 160]
+    y, x = img.shape[0], img.shape[1]
+    potentials = []
+    img = cv2.GaussianBlur(img,(5,5),7)
+    LoG = gaussian_laplace(1.0 * img, sigmas[0])
+    threshold = 0.6 * np.max(LoG)
+    points = zip(*np.where(LoG[:,:] > threshold))
+    print len(points)
+    for point in points:
+        i, j = point[0], point[1]
+        extreme = None
+        for scale in scales:
+            r0 = max(0, i - scale)
+            r1 = min(i + scale, y - 1)
+            c0 = max(0, j - scale)
+            c1 = min(j + scale, x - 1)
+            sub_image = img[r0:r1,c0:c1]
+            patch = gaussian_laplace(1.0 * sub_image, sigmas[0])
+            zc = np.max(patch) > 0 and np.min(patch) < 0
+            if zc and (patch[scale,scale] == np.max(patch)):
+                if extreme is None:
+                    extreme = (i, j, scale, patch[scale,scale])
+                elif patch[scale, scale] > extreme[3]:
+                    extreme = (i, j, scale, patch[scale,scale])
+            if extreme is not None:
+                potentials.append(extreme)
+    return potentials
+
+
+
+
+
+
+# def laplacian_gaussian(patch, sigma):
+#     LoG = scipy.ndimage.gaussian_laplace(patch, sigma)
+#     f = scipy.ndimage.gaussian_filter(np.ones(patch.shape), sigma)
+#     print f
     
+#     # LoG = patch * LoG_filter
+#     return LoG
+    
+
+
+
 def rotateImage(image, angle):
   image_center = tuple(np.array(image.shape[1::-1]) / 2)
   rot_mat = cv2.getRotationMatrix2D(image_center, angle, 1.0)
   result = cv2.warpAffine(image, rot_mat, image.shape[1::-1], flags=cv2.INTER_LINEAR)
   return result
 
+# def draw_corners(img, corners):
+#     y,x = img.shape[0], img.shape[1]
+#     for corner in corners:
+#         i,j,d = corner[0],corner[1],5
+#         r0 = max(0,i - d)
+#         r1 = min(y-1, i+d)
+#         c0 = max(0,j-d)
+#         c1 = min(x-1, j+d)
+#         img[r0:r1,c0:c1] = np.array([0,0,255])
+#     return img
+
+def draw_circles(img, kps):
+    for kp in kps:
+        y = kp[0]
+        x = kp[1]
+        r = kp[2]
+        cv2.circle(img, (int(x),int(y)), int(r), (0,0,255))
+    return img
+
 
 if __name__ == "__main__":
-    img = load_color_image("building.jpg")
-    threshold = 10**6
-    haris1 = harris_corner_detection_lambda(img, 0.04, threshold)
+    img = load_gray_scale_image("building.jpg")
+    
+    color_img = load_color_image("building.jpg")
+    # new_img = draw_circles(color_img, blobs_log)
+    # save_image("circles2.jpg", new_img)
+    LoG = blob_detection(img)
+    new_img = draw_circles(color_img, LoG)
+    save_image("LoG.jpg", new_img)
+
+    # threshold = 10**6
+    # haris1 = harris_corner_detection_lambda(img, 0.04, threshold)
     # haris2 = harris_corner_detection(img, 0.05, threshold)
     # haris3 = harris_corner_detection(img, 0.06, threshold)
-    save_image("harris1_lambda.jpg", haris1)
+    # save_image("harris1_lambda.jpg", haris1)
     # save_image("harris2_s1.jpg", haris2)
     # save_image("harris3_s1.jpg", haris3)
     # brown = brown_corner_detection(img)
