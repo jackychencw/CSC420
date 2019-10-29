@@ -6,12 +6,12 @@ from itertools import chain
 from tqdm import tqdm_notebook, tnrange
 import os
 import random
-import u_net
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
 import tensorflow as tf
+import cv2 as cv
 
 from keras.models import Model, load_model
 from keras.layers import Input, BatchNormalization, Activation, Dense, Dropout
@@ -29,12 +29,14 @@ border = 5
 path_train = './cat_data/Train/'
 path_test = './cat_data/Test/'
 
+
 # Get and resize train images and masks
 
 
 def get_data(path, train=True):
     input_path = path + "input/"
     mask_path = path + "mask/"
+    print(mask_path)
     ids = next(os.walk(input_path))[2]
     X = np.zeros((len(ids), im_height, im_width, 1), dtype=np.float32)
     if train:
@@ -54,9 +56,10 @@ def get_data(path, train=True):
     id = 0
     if train:
         print("Loading masks for input")
-        for inputfilename in os.listdir(mask_path):
-            mask = img_to_array(
-                load_img(mask_path + inputfilename, color_mode="grayscale"))
+        for index in range(len(os.listdir(input_path))):
+            img = load_img(
+                mask_path + "mask_cat.{}.jpg".format(str(index + 60)), color_mode="grayscale")
+            mask = img_to_array(img)
             mask = resize(mask, (im_height, im_width, 1),
                           mode='constant', preserve_range=True)
             y[id] = mask / 255
@@ -143,18 +146,66 @@ def get_unet(input_img, n_filters=16, dropout=0.5, batchnorm=True):
     return model
 
 
+def plot_sample(X, y, preds, binary_preds, ix=None):
+    if ix is None:
+        ix = random.randint(0, len(X))
+
+    has_mask = y[ix].max() > 0
+
+    fig, ax = plt.subplots(1, 4, figsize=(20, 10))
+    ax[0].imshow(X[ix, ..., 0], cmap='seismic')
+    if has_mask:
+        ax[0].contour(y[ix].squeeze(), colors='k', levels=[0.5])
+    ax[0].set_title('Seismic')
+
+    ax[1].imshow(y[ix].squeeze())
+    ax[1].set_title('Salt')
+
+    ax[2].imshow(preds[ix].squeeze(), vmin=0, vmax=1)
+    if has_mask:
+        ax[2].contour(y[ix].squeeze(), colors='k', levels=[0.5])
+    ax[2].set_title('Salt Predicted')
+
+    ax[3].imshow(binary_preds[ix].squeeze(), vmin=0, vmax=1)
+    if has_mask:
+        ax[3].contour(y[ix].squeeze(), colors='k', levels=[0.5])
+    ax[3].set_title('Salt Predicted binary')
+
+
 if __name__ == "__main__":
+    train = False
     input_img = Input((im_height, im_width, 1), name='img')
     model = get_unet(input_img, n_filters=16, dropout=0.05, batchnorm=True)
+    # Train
+    if train:
+        X_train, y_train = get_data(path_train)
+        model.compile(optimizer=Adam(), loss="binary_crossentropy",
+                      metrics=["accuracy"])
+        train_ite = 0
+        callbacks = [
+            EarlyStopping(patience=10, verbose=1),
+            ReduceLROnPlateau(factor=0.1, patience=3,
+                              min_lr=0.00001, verbose=1),
+            ModelCheckpoint('./weights/model-tgs-salt.h5', verbose=1,
+                            save_best_only=False, save_weights_only=True)
+        ]
+        results = model.fit(X_train, y_train, batch_size=32,
+                            epochs=100, callbacks=callbacks)
 
-    model.compile(optimizer=Adam(), loss="binary_crossentropy",
-                  metrics=["accuracy"])
-    callbacks = [
-        EarlyStopping(patience=10, verbose=1),
-        ReduceLROnPlateau(factor=0.1, patience=3, min_lr=0.00001, verbose=1),
-        ModelCheckpoint('model-tgs-salt.h5', verbose=1,
-                        save_best_only=True, save_weights_only=True)
-    ]
-    X_train, y_train = get_data(path_train)
-    results = model.fit(X_train, y_train, batch_size=32,
-                        epochs=100, callbacks=callbacks)
+    # Test
+    else:
+        threshold = 0.2
+        X_test, y_test = get_data(path_test)
+        model.load_weights('./weights/model-tgs-salt.h5')
+        pred_test = model.predict(X_test, verbose=1)
+        # preds_test_t = (pred_test > 0.5).astype(np.uint8)
+        # plot_sample(X_test, y_test, pred_test, preds_test_t, ix=14)
+        for i in range(pred_test.shape[0]):
+            test_x = X_test[i] * 255
+            test_y = y_test[i] * 255
+            test_pred = pred_test[i]
+            test_pred[test_pred > threshold] = 255
+            test_pred[test_pred <= threshold] = 0
+            cv.imwrite("./Output/x/x_{}.jpg".format(i), test_x)
+            cv.imwrite("./Output/y/y_{}.jpg".format(i), test_y)
+            cv.imwrite("./Output/pred/pred_{}.jpg".format(i), test_pred)
