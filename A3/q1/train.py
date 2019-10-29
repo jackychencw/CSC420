@@ -1,0 +1,86 @@
+import dataset
+import unet
+from skimage.transform import resize
+from skimage.io import imread, imshow, concatenate_images
+import argparse
+import numpy as np
+import matplotlib.pyplot as plt
+
+import tensorflow as tf
+import os
+os.environ['CUDA_VISIBLE_DEVICES'] = '0'
+from tensorflow.keras.models import Model, load_model
+from tensorflow.keras.layers import Input, BatchNormalization, Activation, Dense, Dropout
+from tensorflow.keras.layers import Conv2D, Conv2DTranspose
+from tensorflow.keras.layers import MaxPooling2D, GlobalMaxPool2D
+from tensorflow.keras.layers import concatenate, add
+from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau
+from tensorflow.keras.optimizers import SGD
+from tensorflow.keras.preprocessing.image import ImageDataGenerator, array_to_img, img_to_array, load_img, save_img
+from tensorlayer.cost import dice_coe
+
+im_width = 128
+im_height = 128
+border = 5
+path_train = './cat_data/Train/'
+path_test = './cat_data/Test/'
+def train_model(model, learning_rate = 0.01, momentum=0.9, loss = "binary_crossentropy", path_train=path_train):
+    train_dataset = dataset.CatDataset(path_train, 128, 128)
+    X_train, y_train = train_dataset.X, train_dataset.Y
+    model.compile(optimizer=SGD(learning_rate=learning_rate,momentum=momentum), loss=loss,metrics=["accuracy"])
+    callbacks = [
+        EarlyStopping(patience=10, verbose=1),
+        ReduceLROnPlateau(factor=0.1, patience=3,min_lr=0.00001, verbose=1),
+        ModelCheckpoint('./weights/weight.h5', monitor='accuracy', mode='max', verbose=1, save_best_only=True, save_weights_only=True)
+        ]
+    results = model.fit(X_train, y_train, batch_size=32, epochs=100, callbacks=callbacks)
+    return results
+
+def test_model(weight_path, threshold, path_test= path_test):
+    threshold = threshold
+    test_dataset = dataset.CatDataset(path_test, 128, 128)
+    X_test, y_test = test_dataset.X, test_dataset.Y
+    model.load_weights(weight_path)
+    pred_test = model.predict(X_test, verbose=1)
+    dice_coe_result= dice_coe(pred_test, y_test,loss_type="sorensen")
+    print('Sorensen Dice Coefficient result is {}'.format(dice_coe_result))
+    for i in range(pred_test.shape[0]):
+        test_pred = pred_test[i]
+        test_y = y_test[i] * 255
+        test_x = X_test[i] * 255
+        test_pred[test_pred > threshold] = 255
+        test_pred[test_pred <= threshold] = 0
+        save_img("./Output/x/x_{}.jpg".format(i), test_x)
+        save_img("./Output/y/y_{}.jpg".format(i), test_y)
+        save_img("./Output/pred/pred_{}.jpg".format(i), test_pred)
+        
+    model.compile(optimizer=SGD(), loss="binary_crossentropy",metrics=["accuracy"])
+    model.evaluate(X_test, y_test)
+    
+
+if __name__ == "__main__":
+    # # construct the argument parse and parse the arguments
+    # ap = argparse.ArgumentParser()
+    # ap.add_argument("-train", "--train", type=bool, default = True,
+    #     help="Training set")
+    # ap.add_argument("-test", "--test", type=bool, default=False,
+    #     help="Testing set")
+    # args = vars(ap.parse_args())
+    
+    # # grab the number of GPUs and store it in a conveience variable
+    # train = args["train"]
+    # test = args["test"]
+    
+    train = True
+    test = True
+    input_img = Input((im_height, im_width, 1), name='img')
+    model = unet.UNet(input_img)
+    # Train
+    if train:
+        train_model(model)
+
+    # Test
+    if test:
+        weight_path = './weights/weight.h5'
+        threshold = 0.9
+        test_model(weight_path, threshold)
