@@ -6,8 +6,9 @@ import tensorflow as tf
 import numpy as np
 from skimage.transform import resize
 
+
 class CatDataset(Dataset):
-    def __init__(self, rootdirectory, im_height = 128, im_width = 128):
+    def __init__(self, rootdirectory, im_height=128, im_width=128):
         input_directory = rootdirectory + 'input/'
         mask_directory = rootdirectory + 'mask/'
         self.len = len(os.listdir(input_directory))
@@ -41,14 +42,61 @@ class CatDataset(Dataset):
     def __getitem__(self, idx):
         return (self.X[idx], self.Y[idx])
 
-    def data_augment(self):
-            self.flip()
-            return
-    
-    def flip(self):
-        X, Y = self.X, self.Y
-        for i in range(len(X)):
-            self.X.add(X.flip())
-            self.Y.add(Y.flip())
-        print("Done data augmentation: flip")
+    def augment(self):
+        data_size = self.X.shape
+        x = self.X
+        y = self.Y
 
+        # flip
+        axis = np.random.randint(1, 2)
+        flipped_x = np.flip(x, axis=axis)
+        flipped_y = np.flip(y, axis=axis)
+
+        # noise
+        noise = np.random.randint(5, size=data_size, dtype='uint8')
+        noised_x = x + noise
+        noised_y = y
+
+        # rotate
+        rotated_x = np.zeros(data_size)
+        rotated_y = np.zeros(data_size)
+
+        croped_x = np.zeros(data_size)
+        croped_y = np.zeros(data_size)
+        for i in range(data_size[0]):
+            _x = self.X[i]
+            t = self.Y[i]
+
+            k = np.random.randint(1, 3)
+            rotated_x[i] = np.rot90(_x, k)
+            rotated_y[i] = np.rot90(t, k)
+
+            hd = np.random.randint(0, 1)
+            wd = np.random.randint(0, 1)
+            h_crop = np.random.randint(0, data_size[1]/5)
+            w_crop = np.random.randint(0, data_size[2]/5)
+            # crop from top if hd = 0, else from bottom
+            if hd == 0:
+                # crop from left if wd == 0, else from right
+                if wd == 0:
+                    cx = _x[h_crop:, w_crop:]
+                    ct = t[h_crop:, w_crop:]
+                else:
+                    cx = _x[h_crop:, :-w_crop]
+                    ct = t[h_crop:, :-w_crop]
+            else:
+                if wd == 0:
+                    cx = _x[:-h_crop, w_crop:]
+                    ct = t[:-h_crop, w_crop:]
+                else:
+                    cx = _x[:-h_crop, :-w_crop]
+                    ct = t[:-h_crop, :-w_crop]
+            croped_x[i] = resize(cx, (data_size[1], data_size[2]))
+            croped_y[i] = resize(ct, (data_size[1], data_size[2]))
+        aug_x = np.concatenate(
+            (x, flipped_x, noised_x, rotated_x, croped_x), axis=0)
+        aug_y = np.concatenate(
+            (y, flipped_y, noised_y, rotated_y, croped_y), axis=0)
+
+        self.X = aug_x
+        self.Y = aug_y
