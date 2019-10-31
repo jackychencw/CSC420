@@ -1,11 +1,14 @@
 import numpy as np
-import cv2 as cv
 from shapely.geometry.point import Point
 from skimage.draw import circle_perimeter_aa
 import matplotlib.pyplot as plt
+from keras.preprocessing.image import load_img, save_img, array_to_img, img_to_array
+from skimage.transform import resize
+import os
+os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 
-TRAIN_PATH = "./data/train/"
-
+TRAIN_PATH = "./DATA/TRAIN/"
+TEST_PATH = "./DATA/TEST/"
 
 def draw_circle(img, row, col, rad):
     rr, cc, val = circle_perimeter_aa(row, col, rad)
@@ -74,17 +77,39 @@ def main():
     print((results > 0.7).mean())
 
 
-def data_prep(dataset_size=10000, img_size=200):
+def data_prep(path, dataset_size=1000, img_size=200):
     X = np.zeros((dataset_size, img_size, img_size, 1))
-    Y = np.zeros((dataset_size, img_size, img_size, 3))
+    Y = np.zeros((dataset_size, img_size, img_size, 1))
     for _ in range(dataset_size):
         target, img, noised_img = data_prep_noisy_circle(img_size, 50, 2)
         noised_img = np.interp(
-            noised_img, (noised_img.min(), noised_img.max()), (0, 255.0))
-        img = np.interp(img, (img.min(), img.max()), (0, 255.0))
-        cv.imwrite("{}input/input.{}.jpg".format(TRAIN_PATH, _), noised_img)
-        cv.imwrite("{}target/target.{}.jpg".format(TRAIN_PATH, _), img)
+            noised_img, (noised_img.min(), noised_img.max()), (0, 255))
+        noised_img = resize(noised_img, (img_size, img_size, 1))
+        img = np.interp(img, (img.min(), img.max()), (0, 255))
+        img = resize(img, (img_size, img_size, 1))
+        save_img("{}input/input.{}.jpg".format(path, _), noised_img)
+        save_img("{}target/target.{}.jpg".format(path, _), img)
+
+
+def load_data(path, img_size = 200):
+    input_path = path + "input/"
+    target_path = path + "target/"
+    dataset_size = len(os.listdir(input_path))
+    X = np.zeros((dataset_size, img_size, img_size, 1))
+    Y = np.zeros((dataset_size, img_size, img_size, 1))
+    for _ in range(dataset_size):
+        i = load_img(input_path + os.listdir(input_path)[_])
+        t = load_img(target_path + os.listdir(target_path)[_])
+        i = img_to_array(i)
+        t = img_to_array(t)
+        i = resize(i, (img_size, img_size, 1))
+        t = resize(t, (img_size, img_size, 1))
+        X[_] = i
+        Y[_] = t
+    return (X,Y)
 
 
 if __name__ == "__main__":
-    # data_prep()
+    # data_prep(TRAIN_PATH)
+    # data_prep(TEST_PATH)
+    (X, Y) = load_data(TRAIN_PATH)
