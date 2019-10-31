@@ -136,3 +136,20 @@ def train_model(model, X, Y, test_images, test_labels, save_path, learning_rate 
 
 if __name__ == "__main__":
     data_prep(TRAIN_PATH)
+    # data_prep(TRAIN_PATH)
+    # data_prep(TEST_PATH)
+    # X, Y = load_data(TRAIN_PATH)
+    # test_images, test_labels = load_data(TEST_PATH)
+
+    # train = True
+    # test = False
+    # model = CNN.cnn()
+    # save_path = './weights/weight.h5'
+    # loss = "categorical_crossentropy"
+
+    # if train:
+    #     train_model(model, X, Y,test_images, test_labels, save_path, loss=loss)
+
+    # # Test
+    # if test:
+    #     None
