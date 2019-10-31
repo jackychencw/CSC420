@@ -28,7 +28,7 @@ path_test = './cat_data/Test/'
 
 def train_model(model, save_path='./weights/weight.h5', learning_rate=0.01, momentum=0.9, loss="binary_crossentropy", path_train=path_train):
     train_dataset = dataset.CatDataset(path_train, 128, 128)
-    train_dataset.augment()
+    # train_dataset.augment()
     X_train, y_train = train_dataset.X, train_dataset.Y
     model.compile(optimizer=SGD(learning_rate=learning_rate,
                                 momentum=momentum), loss=loss, metrics=["accuracy"])
@@ -46,7 +46,6 @@ def train_model(model, save_path='./weights/weight.h5', learning_rate=0.01, mome
 def test_model(weight_path, threshold, path_test=path_test):
     threshold = threshold
     test_dataset = dataset.CatDataset(path_test, 128, 128)
-    print(len(dataset))
     X_test, y_test = test_dataset.X, test_dataset.Y
     model.load_weights(weight_path)
     pred_test = model.predict(X_test, verbose=1)
@@ -86,9 +85,10 @@ if __name__ == "__main__":
     model = unet.UNet(input_img)
 
     # save_path='./weights/weight.h5'
-    save_path = './weights/weight_mse.h5'
+    loss = "binary_crossentropy"
+    save_path = './weights/weight_{}.h5'.format(loss)
     # loss = "binary_crossentropy"
-    loss = "mean_squared_error"
+    
     # Train
     if train:
         train_model(model, save_path=save_path, loss=loss)
