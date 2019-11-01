@@ -24,20 +24,12 @@ def UNet(input, n_channels=64, kernel_size=3, batchnorm = True):
     c2 = conv(p1, 2 * n_channels, kernel_size, batchnorm)
     p2 = MaxPooling2D((2, 2))(c2)
     c3 = conv(p2, 4 * n_channels, kernel_size, batchnorm)
-    p3 = MaxPooling2D((2, 2))(c3)
-    c4 = conv(p3, 8 * n_channels, kernel_size, batchnorm)
-    p4 = MaxPooling2D((2, 2))(c4)
-    c5 = conv(p4, 16 * n_channels, kernel_size, batchnorm)
+    
     # Up Conv
     kernel = (2,2)
     stride = (2,2)
-    u6 = Conv2DTranspose(8 * n_channels, kernel, strides=stride, padding='same')(c5)
-    u6 = concatenate([u6, c4])
-    c6 = conv(u6, 8 * n_channels, kernel_size, batchnorm)
-    u7 = Conv2DTranspose(4 * n_channels, kernel, strides=stride, padding='same')(c6)
-    u7 = concatenate([u7, c3])
-    c7 = conv(u7, 4 * n_channels, kernel_size, batchnorm)
-    u8 = Conv2DTranspose(2 * n_channels, kernel, strides=stride, padding='same')(c7)
+
+    u8 = Conv2DTranspose(2 * n_channels, kernel, strides=stride, padding='same')(c3)
     u8 = concatenate([u8, c2])
     c8 = conv(u8, 2 * n_channels, kernel_size, batchnorm)
     u9 = Conv2DTranspose(n_channels, kernel, strides=stride, padding='same')(c8)

@@ -10,7 +10,7 @@ from skimage.transform import resize
 class CatDataset(Dataset):
     def __init__(self, rootdirectory, im_height=128, im_width=128):
         input_directory = rootdirectory + 'input/'
-        mask_directory = rootdirectory + 'target/'
+        mask_directory = rootdirectory + 'mask/'
         self.len = len(os.listdir(input_directory))
         self.X = np.zeros((self.len, im_height, im_width, 1), dtype=np.float32)
         self.Y = np.zeros((self.len, im_height, im_width, 1), dtype=np.float32)

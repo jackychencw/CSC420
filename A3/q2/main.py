@@ -1,20 +1,20 @@
-import os
+import os, shutil
 os.environ['CUDA_VISIBLE_DEVICES'] = '0'
+
 import numpy as np
 from shapely.geometry.point import Point
 from skimage.draw import circle_perimeter_aa
 import matplotlib.pyplot as plt
 from tensorflow.keras.preprocessing.image import load_img, save_img, array_to_img, img_to_array
 from tensorflow.keras.utils import to_categorical
-from tensorflow.keras.optimizers import SGD
+from tensorflow.keras.optimizers import SGD, Adam
 from tensorflow.keras.layers import Input
 from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau
 from skimage.transform import resize
-import CNN
 
 
-TRAIN_PATH = "./DATA/TRAIN/"
-TEST_PATH = "./DATA/TEST/"
+TRAIN_PATH = "./circle_data/Train/"
+TEST_PATH = "./circle_data/Test/"
 IMG_SIZE = 200
 
 def draw_circle(img, row, col, rad):
@@ -83,23 +83,48 @@ def main():
     results = np.array(results)
     print((results > 0.7).mean())
 
+def clean_dir(path):
+    if os.path.exists(path):
+        for the_file in os.listdir(path):
+            file_path = os.path.join(path, the_file)
+            try:
+                if os.path.isfile(file_path):
+                    os.unlink(file_path)
+                elif os.path.isdir(file_path): shutil.rmtree(file_path)
+            except Exception as e:
+                print(e)
+
+def make_dir(path):
+    if not os.path.exists(path):
+        os.mkdir(path)
+
 
 def data_prep(path, dataset_size=1000, img_size=IMG_SIZE):
+    # make_dir(path)
+    input_path = path + "input/"
+    mask_path = path + "mask/"
+    # make_dir(input_path)
+    clean_dir(input_path)
+    # make_dir(mask_path)
+    clean_dir(mask_path)
+    # print("All files cleaned up")
     X = np.zeros((dataset_size, img_size, img_size, 1))
-    Y = np.zeros((dataset_size, img_size, img_size, 1))
+    masks = np.zeros((dataset_size, img_size, img_size, 1))
+    targets = np.zeros((dataset_size, 3))
+
     for _ in range(dataset_size):
         target, img, noised_img = data_prep_noisy_circle(img_size, 50, 2)
-        noised_img = np.interp(
-            noised_img, (noised_img.min(), noised_img.max()), (0, 255))
+        # noised_img = np.interp(
+        #     noised_img, (noised_img.min(), noised_img.max()), (0, 255))
         noised_img = resize(noised_img, (img_size, img_size, 1))
-        img = np.interp(img, (img.min(), img.max()), (0, 255))
+        # img = np.interp(img, (img.min(), img.max()), (0, 255))
         img = resize(img, (img_size, img_size, 1))
-        zeros = np.where(img==0)
-        ones = np.where(img==255)
-        img[zeros] = 255
-        img[ones] = 0
-        save_img("{}input/input.{}.jpg".format(path, _), noised_img)
-        save_img("{}target/target.{}.jpg".format(path, _), noised_img - img)
+        X[_] = noised_img
+        masks[_] = img
+        targets[_] = target
+        save_img("{}input.{}.jpg".format(input_path, _), noised_img)
+        save_img("{}target.{}.jpg".format(mask_path, _), img)
+    return X, masks, targets
 
 
 def load_data(path, img_size = IMG_SIZE):
@@ -122,7 +147,7 @@ def load_data(path, img_size = IMG_SIZE):
 
 def train_model(model, X, Y, test_images, test_labels, save_path, learning_rate = 0.01, momentum = 0.9, loss="categorical_crossentropy"):
     print("Start training model")
-    model.compile(optimizer=SGD(learning_rate=learning_rate,
+    model.compile(optimizer=Adam(learning_rate=learning_rate,
                                 momentum=momentum), loss=loss, metrics=["accuracy"])
     callbacks = [
         EarlyStopping(patience=10, verbose=1),
@@ -135,21 +160,6 @@ def train_model(model, X, Y, test_images, test_labels, save_path, learning_rate 
     return results
 
 if __name__ == "__main__":
-    data_prep(TRAIN_PATH)
-    # data_prep(TRAIN_PATH)
-    # data_prep(TEST_PATH)
-    # X, Y = load_data(TRAIN_PATH)
-    # test_images, test_labels = load_data(TEST_PATH)
-
-    # train = True
-    # test = False
-    # model = CNN.cnn()
-    # save_path = './weights/weight.h5'
-    # loss = "categorical_crossentropy"
-
-    # if train:
-    #     train_model(model, X, Y,test_images, test_labels, save_path, loss=loss)
-
-    # # Test
-    # if test:
-    #     None
+    # X_train, masks_train, targets_train = data_prep(TRAIN_PATH, dataset_size = 300)
+    # X_test, masks_test, targets_test = data_prep(TEST_PATH, dataset_size = 40)
+    None
