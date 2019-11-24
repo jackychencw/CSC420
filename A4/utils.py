@@ -12,3 +12,9 @@ def show_image(img):
     cv.imshow("Showing image",img)
     cv.waitKey(0)
     cv.destroyAllWindows()
+
+def read_file(fname):
+    fo = open(fname)
+    lines = fo.readlines()
+    fo.close()
+    return lines
