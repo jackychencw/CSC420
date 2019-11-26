@@ -194,3 +194,37 @@ if __name__ == "__main__":
     img2 = vconcate(img1, depth)
     save_image('./concated.jpg', img2)
     # (b)
+  bar.start()
+  count = 0
+  myobj = plt.show(right_color)
+
+  point1 = (y1, x1)
+  point2 = (y1, x2)
+  point3 = (y2, x1)
+  point4 = (y2, x2)
+  points = [point1, point2, point3, point4]
+  for x in range(patch_size, width_right - patch_size):
+    for point in points:
+      y = point[0], point[1]
+  # for x in range(x1, x2 + 1):
+  #   for y in range(y1, y2 + 1):
+  #     target_patch = left_img[y - patch_size: y + patch_size, x - patch_size: x + patch_size]
+      
+  #     scores = []
+  #     for x2 in range(patch_size, width_right - patch_size):
+  #       source_patch = right_img[y - patch_size: y + patch_size, x2 - patch_size: x2 + patch_size]
+  #       score = nc(source_patch, target_patch)
+  #       scores.append(score)
+  #       count += 1
+  #       bar.update(count)
+  #     fx = np.argmin(scores)
+  #     right_color[y, fx] = np.array([0,255,0])
+  #     myobj.set_data(right_color)
+  #     plt.draw()
+  
+      
+
+  
+if __name__ == "__main__":
+  scan()
+    
