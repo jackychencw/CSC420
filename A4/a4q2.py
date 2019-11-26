@@ -3,8 +3,9 @@ import numpy as np
 import cv2 as cv
 import matplotlib.pyplot as plt
 import progressbar
+from scipy.ndimage.filters import gaussian_filter
 
-patch_size = 8
+patch_size = 4
 
 f = 721.537700
 px = 609.559300
@@ -26,10 +27,17 @@ def load_grey_scale_image(filepath):
     return image
 
 
-left_grey = load_grey_scale_image('./A4_files/000020_left.jpg')
-right_grey = load_grey_scale_image('./A4_files/000020_right.jpg')
-left_color = load_color_image('./A4_files/000020_left.jpg')
-right_color = load_color_image('./A4_files/000020_right.jpg')
+def increase_brightness(img, value=50):
+    hsv = cv.cvtColor(img, cv.COLOR_BGR2HSV)
+    h, s, v = cv.split(hsv)
+
+    lim = 255 - value
+    v[v > lim] = 255
+    v[v <= lim] += value
+
+    final_hsv = cv.merge((h, s, v))
+    img = cv.cvtColor(final_hsv, cv.COLOR_HSV2BGR)
+    return img
 
 
 def show_image(img):
@@ -40,6 +48,18 @@ def show_image(img):
 
 def save_image(fname, img):
     cv.imwrite(fname, img)
+
+
+left_color = load_color_image('./A4_files/000020_left.jpg')
+right_color = load_color_image('./A4_files/000020_right.jpg')
+left_bright = increase_brightness(left_color)
+right_bright = increase_brightness(right_color)
+save_image("./A4_files/000020_left_bright.jpg", left_bright)
+save_image("./A4_files/000020_right_bright.jpg", right_bright)
+left_grey = load_grey_scale_image('./A4_files/000020_left_bright.jpg')
+right_grey = load_grey_scale_image('./A4_files/000020_right_bright.jpg')
+# left_grey = gaussian_filter(left_grey, sigma=7)
+# right_grey = gaussian_filter(right_grey, sigma=7)
 
 
 def ssd(patch1, patch2):
@@ -71,21 +91,21 @@ def draw_box(x1, y1, x2, y2, img, thickness=0):
 # (a)
 
 
-def down_sample(img, factor, ite=1):
+def down_sample(img, factor, ite=3):
     for i in range(ite):
         height, width = img.shape[0], img.shape[1]
         img = cv.pyrDown(img, dstsize=(width // factor, height // factor))
     return img
 
 
-def up_sample(img, factor, ite=1):
+def up_sample(img, factor, ite=3):
     for i in range(ite):
         height, width = img.shape[0], img.shape[1]
         img = cv.pyrUp(img, dstsize=(width * factor, height * factor))
     return img
 
 
-def scan_all(downsample_factor=2, img1=left_grey, img2=right_grey, patch_size=patch_size):
+def scan_all(scan_size=1000000, downsample_factor=2, img1=left_grey, img2=right_grey, patch_size=patch_size):
     img1 = down_sample(img1, downsample_factor)
     img2 = down_sample(img2, downsample_factor)
     height1, width1 = img1.shape[0], img1.shape[1]
@@ -93,50 +113,47 @@ def scan_all(downsample_factor=2, img1=left_grey, img2=right_grey, patch_size=pa
     assert height1 == height2 and width1 == width2
 
     # Setup progress bar
-    ite_num = (height1 - 2 * patch_size) * (width1 - 2 *
-                                            patch_size) * (width2 - 2 * patch_size)
+    ite_num = height1 * width1 * 2 * min(scan_size, width2)
     bar = progressbar.ProgressBar(maxval=ite_num,
                                   widgets=[progressbar.Bar('=', '[', ']'), ' ', progressbar.Percentage()])
     bar.start()
     count = 0
-
     # Start sliding window
     diff = np.zeros((height1, width1))
     match = np.zeros((height1, width1))
-    for y1 in range(height1):
-        for x1 in range(width1):
-            x1i = max(0, x1 - patch_size)
-            to_left = abs(x1 - x1i)
-            x1d = min(width1 - 1, x1 + patch_size)
-            to_right = abs(x1 - x1d)
-            y1i = max(0, y1 - patch_size)
-            to_up = abs(y1 - y1i)
-            y1d = min(height1 - 1, y1 + patch_size)
-            to_down = abs(y1 - y1d)
-            patch1 = img1[y1i: y1d, x1i:x1d]
-
+    for y1 in range(patch_size, height1 - patch_size):
+        for x1 in range(patch_size, width1 - patch_size):
+            patch1 = img1[y1 - patch_size: y1 + patch_size,
+                          x1 - patch_size:x1 + patch_size]
             y2 = y1
             best_score = None
             best_ind = None
-            yd = min(height1 - 1, y1)
-            xd = min(width1 - 1, x1)
-            for x2 in range(to_left, width2 - to_right):
-                x2i = max(0, x2 - to_left)
-                x2d = min(width2 - 1, x2 + to_right)
-                y2i = max(0, y2 - to_up)
-                y2d = min(height2 - 1, y2 + to_down)
-                patch2 = img2[y2i: y2d, x2i:x2d]
-                assert patch1.shape == patch2.shape
+            max_col = min(width2 - patch_size - x1 - 1, scan_size)
+            for k in range(0, max_col):
+                xi = x1 - patch_size + k
+                xd = x1 + patch_size + k
+                patch2 = img2[y2 - patch_size:y2 + patch_size, xi:xd]
                 score = ssd(patch1, patch2)
-                if best_score is None or best_score > score:
+                if best_score is None or score < best_score:
                     best_score = score
-                    best_ind = x2
-                count += 1
-                if count <= ite_num:
-                    bar.update(count)
+                    best_ind = k
+            diff[y1 - patch_size, x1 - patch_size] = best_ind
+            # for x2 in range(max(x1 - scan_size, patch_size), min(x1 + scan_size, width2 - patch_size)):
+            #     patch2 = img2[y2 - patch_size: y2 + patch_size,
+            #                   x2 - patch_size:x2 + patch_size]
+            #     assert patch1.shape == patch2.shape
+            #     score = ssd(patch1, patch2)
+            #     if best_score is None or best_score > score:
+            #         best_score = score
+            #         best_ind = x2
+            #     count += 1
+            #     if count <= ite_num:
+            #         bar.update(count)
             # addup = 10000 * score/((patch_size ** 2 * 255) ** 2)
-            addup = 0
-            diff[y1, x1] = abs(best_ind - x1) + addup
+            # addup = 0
+            # diff[y1, x1] = abs(best_ind - x1) + addup
+    print(diff)
+    print("\ndone matching")
     diff = up_sample(diff, downsample_factor)
     save_image("./diff.jpg", diff)
     return diff
@@ -192,39 +209,5 @@ if __name__ == "__main__":
     depth = calculate_depth(diff)
     img1 = vconcate(left_grey, right_grey)
     img2 = vconcate(img1, depth)
-    save_image('./concated.jpg', img2)
+    save_image('./concated4.jpg', img2)
     # (b)
-  bar.start()
-  count = 0
-  myobj = plt.show(right_color)
-
-  point1 = (y1, x1)
-  point2 = (y1, x2)
-  point3 = (y2, x1)
-  point4 = (y2, x2)
-  points = [point1, point2, point3, point4]
-  for x in range(patch_size, width_right - patch_size):
-    for point in points:
-      y = point[0], point[1]
-  # for x in range(x1, x2 + 1):
-  #   for y in range(y1, y2 + 1):
-  #     target_patch = left_img[y - patch_size: y + patch_size, x - patch_size: x + patch_size]
-      
-  #     scores = []
-  #     for x2 in range(patch_size, width_right - patch_size):
-  #       source_patch = right_img[y - patch_size: y + patch_size, x2 - patch_size: x2 + patch_size]
-  #       score = nc(source_patch, target_patch)
-  #       scores.append(score)
-  #       count += 1
-  #       bar.update(count)
-  #     fx = np.argmin(scores)
-  #     right_color[y, fx] = np.array([0,255,0])
-  #     myobj.set_data(right_color)
-  #     plt.draw()
-  
-      
-
-  
-if __name__ == "__main__":
-  scan()
-    
