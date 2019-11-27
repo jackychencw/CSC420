@@ -5,21 +5,25 @@ from operator import itemgetter
 
 
 def sift(img, nfeatures=10, ct=0.04, et=5, sigma=20):
+    print("Finding Key Points ... ")
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     sift = cv2.xfeatures2d.SIFT_create(
         contrastThreshold=ct, edgeThreshold=et, sigma=sigma)
     kp, des = sift.detectAndCompute(gray, None)
     img = cv2.drawKeypoints(
         gray, kp, img, flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
+    print("Done finding key points")
     return kp, des, img
 
 
 def sift_color(img, nfeatures=100, ct=0.04, et=10, sigma=5):
+    print("Finding Key Points ... ")
     sift = cv2.xfeatures2d.SIFT_create(
         contrastThreshold=ct, edgeThreshold=et, sigma=sigma)
     kp, des = sift.detectAndCompute(img, None)
     img = cv2.drawKeypoints(
         img, kp, img, flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
+    print("Done finding key points")
     return kp, des, img
 
 
@@ -93,6 +97,35 @@ def match_images(img1, img2, color=False):
     return new_img
 
 
+def fm(img1, img2):
+    sf = cv.SIFT()
+    kp1, des1 = sf.detectAndCompute(img1, None)
+    kp2, des2 = sf.detectAndCompute(img2, None)
+
+    FLANN_INDEX_KDTREE = 1
+    index_params = dict(algorighm=FLANN_INDEX_KDTREE, trees=5)
+    search_params = dict(checks=50)
+
+    flann = cv2.FlannBasedMatcher(index_params, search_params)
+    matches = flann.knnMatch(des1, des2, k=2)
+
+    good = []
+    pts1 = []
+    pts2 = []
+    for i, (m, n) in enumerate(matches):
+        if m.distance < 0.8 * n.distance:
+            good.append(m)
+            pts2.append(kp2[m, trainIdx].pt)
+            pts1.append(kp1[m, queryIdx].pt)
+    pts1 = np.int32(pts1)
+    pts2 = np.int32(pts2)
+    F, mask = cv2.findFundementalMat(pts1, pts2, cv2.FM_LMEDS)
+
+    pts1 = pts1[mask.ravel() == 1]
+    pts2 = pts2[mask.ravel() == 1]
+    return pts1, pts2
+
+
 if __name__ == '__main__':
     # img1_path = './images/img1.jpeg'
     # img1_rotate_path = './images/img1_rotate.jpeg'
@@ -118,6 +151,8 @@ if __name__ == '__main__':
     img3_rotate = cv2.imread(img3_rotate_path)
     img3_moved = cv2.imread(img3_moved_path)
 
-    new_img = match_images(img3_origin, img3_rotate)
+    # (a)
+    # new_img = match_images(img3_origin, img3_rotate)
+    # cv2.imwrite('./results/img3_match_origin_rotate.jpeg', new_img)
 
-    cv2.imwrite('./results/img3_match_origin_rotate.jpeg', new_img)
+    # (b)

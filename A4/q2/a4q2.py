@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import progressbar
 from scipy.ndimage.filters import gaussian_filter
 
-patch_size = 14
+patch_size = 11
 
 f = 721.537700
 px = 609.559300
@@ -91,21 +91,21 @@ def draw_box(x1, y1, x2, y2, img, thickness=0):
 # (a)
 
 
-def down_sample(img, factor=2, ite=3):
+def down_sample(img, factor=2, ite=1):
     for i in range(ite):
         height, width = img.shape[0], img.shape[1]
         img = cv.pyrDown(img, dstsize=(width // factor, height // factor))
     return img
 
 
-def up_sample(img, factor=2, ite=3):
+def up_sample(img, factor=2, ite=1):
     for i in range(ite):
         height, width = img.shape[0], img.shape[1]
         img = cv.pyrUp(img, dstsize=(width * factor, height * factor))
     return img
 
 
-def scan_all(scan_size=50, downsample=False, img1=left_grey, img2=right_grey, patch_size=patch_size):
+def scan_all(scan_size=50, downsample=True, img1=left_grey, img2=right_grey, patch_size=patch_size):
     if downsample:
         img1 = down_sample(img1)
         img2 = down_sample(img2)
@@ -207,9 +207,9 @@ def calculate_depth(diff, f=f, T=baseline):
 
 if __name__ == "__main__":
     # (a)
-    diff = scan_all()
-    depth = calculate_depth(diff)
-    save_image('./depth.jpg', depth)
-    depth2 = np.interp(depth, (depth.min(), depth.max()), (0, 255.0))
-    save_image('./depth2.jpg', depth)
+    for ps in [10, 12, 14, 16, 18, 20]:
+        diff = scan_all(patch_size=ps)
+        depth = calculate_depth(diff)
+        depth2 = np.interp(depth, (depth.min(), depth.max()), (0, 255.0))
+        save_image(f'./depth_ps{ps}.jpg', depth2)
     # (b)
