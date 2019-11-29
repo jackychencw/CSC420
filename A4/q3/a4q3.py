@@ -1,30 +1,34 @@
+import matplotlib.pyplot as plt
 import cv2
 import numpy as np
-from skimage.draw import line_aa
-from operator import itemgetter
+from scipy.ndimage.filters import gaussian_laplace, minimum_filter
+import math
+import scipy
 
 
 def sift(img, nfeatures=10, ct=0.04, et=5, sigma=20):
+    new_img = np.copy(img)
     print("Finding Key Points ... ")
-    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    gray = cv2.cvtColor(new_img, cv2.COLOR_BGR2GRAY)
     sift = cv2.xfeatures2d.SIFT_create(
         contrastThreshold=ct, edgeThreshold=et, sigma=sigma)
     kp, des = sift.detectAndCompute(gray, None)
-    img = cv2.drawKeypoints(
-        gray, kp, img, flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
+    new_img = cv2.drawKeypoints(
+        gray, kp, new_img, flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
     print("Done finding key points")
-    return kp, des, img
+    return kp, des, new_img
 
 
 def sift_color(img, nfeatures=100, ct=0.04, et=10, sigma=5):
+    new_img = np.copy(img)
     print("Finding Key Points ... ")
     sift = cv2.xfeatures2d.SIFT_create(
         contrastThreshold=ct, edgeThreshold=et, sigma=sigma)
-    kp, des = sift.detectAndCompute(img, None)
-    img = cv2.drawKeypoints(
-        img, kp, img, flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
+    kp, des = sift.detectAndCompute(new_img, None)
+    new_img = cv2.drawKeypoints(
+        new_img, kp, new_img, flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
     print("Done finding key points")
-    return kp, des, img
+    return kp, des, new_img
 
 
 def distance(des1, des2):
@@ -65,14 +69,15 @@ def concatenate(i1, i2):
 
 
 def draw_square(img, r, c, l, color):
-    y = img.shape[0]
-    x = img.shape[1]
+    img_cp = np.copy(img)
+    y = img_cp.shape[0]
+    x = img_cp.shape[1]
     r0 = max(r - l, 0)
     r1 = min(r + l + 1, y)
     c0 = max(c - l, 0)
     c1 = min(c + l + 1, x)
-    img[r0: r1, c0: c1] = color
-    return img
+    img_cp[r0: r1, c0: c1] = color
+    return img_cp
 
 
 def match_images(img1, img2, color=False):
@@ -97,10 +102,26 @@ def match_images(img1, img2, color=False):
     return new_img
 
 
+def drawlines(img1, img2, lines, pts1, pts2):
+    ''' img1 - image on which we draw the epilines for the points in img2
+        lines - corresponding epilines '''
+    r, c = img1.shape
+    img1 = cv.cvtColor(img1, cv.COLOR_GRAY2BGR)
+    img2 = cv.cvtColor(img2, cv.COLOR_GRAY2BGR)
+    for r, pt1, pt2 in zip(lines, pts1, pts2):
+        color = tuple(np.random.randint(0, 255, 3).tolist())
+        x0, y0 = map(int, [0, -r[2]/r[1]])
+        x1, y1 = map(int, [c, -(r[2]+r[0]*c)/r[1]])
+        img1 = cv.line(img1, (x0, y0), (x1, y1), color, 1)
+        img1 = cv.circle(img1, tuple(pt1), 5, color, -1)
+        img2 = cv.circle(img2, tuple(pt2), 5, color, -1)
+    img = concatenate(img1, img2)
+    return img
+
+
 def fm(img1, img2):
-    sf = cv.SIFT()
-    kp1, des1 = sf.detectAndCompute(img1, None)
-    kp2, des2 = sf.detectAndCompute(img2, None)
+    kp1, des1, img1_sift = sift(img1)
+    kp2, des2, img1_sift = sift(img2)
 
     FLANN_INDEX_KDTREE = 1
     index_params = dict(algorighm=FLANN_INDEX_KDTREE, trees=5)
@@ -115,44 +136,36 @@ def fm(img1, img2):
     for i, (m, n) in enumerate(matches):
         if m.distance < 0.8 * n.distance:
             good.append(m)
-            pts2.append(kp2[m, trainIdx].pt)
-            pts1.append(kp1[m, queryIdx].pt)
+            pts2.append(kp2[m.trainIdx].pt)
+            pts1.append(kp1[m.queryIdx].pt)
     pts1 = np.int32(pts1)
     pts2 = np.int32(pts2)
     F, mask = cv2.findFundementalMat(pts1, pts2, cv2.FM_LMEDS)
 
     pts1 = pts1[mask.ravel() == 1]
     pts2 = pts2[mask.ravel() == 1]
-    return pts1, pts2
+
+    lines1 = cv2.computeCorrespondEpilines(pts2.reshape(-1, 1, 2), 2, F)
+    lines1 = lines1.reshape(-1, 3)
+
+    return pts1, pts2, lines1
 
 
 if __name__ == '__main__':
-    # img1_path = './images/img1.jpeg'
-    # img1_rotate_path = './images/img1_rotate.jpeg'
-    # img1_moved_path = './images/img1_moved.jpeg'
-
-    # img1_origin = cv2.imread(img1_path)
-    # img1_rotate = cv2.imread(img1_rotate_path)
-    # img1_moved = cv2.imread(img1_moved_path)
-
-    # img2_path = './images/img2.jpeg'
-    # img2_rotate_path = './images/img2_rotate.jpeg'
-    # img2_moved_path = './images/img2_moved.jpeg'
-
-    # img2_origin = cv2.imread(img2_path)
-    # img2_rotate = cv2.imread(img2_rotate_path)
-    # img2_moved = cv2.imread(img2_moved_path)
-
+    img1_path = './images/img1.jpeg'
+    img2_path = './images/img2.jpeg'
     img3_path = './images/img3.jpeg'
-    img3_rotate_path = './images/img3_rotate.jpeg'
-    img3_moved_path = './images/img3_moved.jpeg'
 
-    img3_origin = cv2.imread(img3_path)
-    img3_rotate = cv2.imread(img3_rotate_path)
-    img3_moved = cv2.imread(img3_moved_path)
+    img1 = cv2.imread(img1_path)
+    img2 = cv2.imread(img2_path)
+    img3 = cv2.imread(img3_path)
 
     # (a)
-    # new_img = match_images(img3_origin, img3_rotate)
-    # cv2.imwrite('./results/img3_match_origin_rotate.jpeg', new_img)
-
+    i1i2 = match_images(img1, img2)
+    cv2.imwrite('./results/i1i2.jpeg', i1i2)
+    i1i3 = match_images(img1, img3)
+    cv2.imwrite('./results/i1i3.jpeg', i1i3)
     # (b)
+    # pts1, pts2, lines = fm(img3_origin, img3_moved)
+    # img = drawlines(img3_origin, img3_moved, lines, pts1, pts2)
+    # cv2.imwrite("./results/epipolar.jpeg", img)
