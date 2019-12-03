@@ -41,6 +41,17 @@ parser.add_argument('--save-path',
                     type=str,
                     default='./weights/weight.h5',
                     help='loss function')
+
+parser.add_argument('--pred-path',
+                    type=str,
+                    default='',
+                    help='pred data path')
+parser.add_argument('--train',
+                    type=bool, default=False, help='train or not')
+parser.add_argument('--test',
+                    type=bool, default=False, help='test or not')
+parser.add_argument('--predict',
+                    type=bool, default=False, help='predict or not')
 args = parser.parse_args()
 
 if not os.path.exists("./weights"):
@@ -49,6 +60,8 @@ path_train = args.train_path
 path_test = args.test_path
 loss = args.loss
 save_path = args.save_path
+path_pred = args.pred_path
+path_weight = save_path
 
 
 def train_model(model, save_path=save_path, learning_rate=0.01, momentum=0.9, loss="binary_crossentropy", path_train=path_train):
@@ -68,6 +81,17 @@ def train_model(model, save_path=save_path, learning_rate=0.01, momentum=0.9, lo
     return results
 
 
+def predict(weight_path, pred_path, out_path="./Output/pred"):
+    if not os.path.exists("./Output"):
+        os.mkdir("./Output")
+    for filename in os.listdir(pred_path):
+        file_path = pred_path + filename
+        out_file_path = out_path + filename
+        img = cv.imread(file_path, 0)
+        pred = model.predict(img, verbose=1)
+        cv.imwrite(out_file_path, pred)
+
+
 def test_model(weight_path, threshold, path_test=path_test):
     if not os.path.exists("./Output"):
         os.mkdir("./Output")
@@ -77,13 +101,12 @@ def test_model(weight_path, threshold, path_test=path_test):
         os.mkdir("./Output/y")
     if not os.path.exists("./Output/pred"):
         os.mkdir("./Output/pred")
-    threshold = threshold
     test_dataset = dataset.CatDataset(path_test, 128, 128)
     X_test, y_test = test_dataset.X, test_dataset.Y
     model.load_weights(weight_path)
     pred_test = model.predict(X_test, verbose=1)
-    dice_coe_result = dice_coe(pred_test, y_test, loss_type="sorensen")
-    print('Sorensen Dice Coefficient result is {}'.format(dice_coe_result))
+    # dice_coe_result = dice_coe(pred_test, y_test, loss_type="sorensen")
+    # print('Sorensen Dice Coefficient result is {}'.format(dice_coe_result))
     for i in range(pred_test.shape[0]):
         test_pred = pred_test[i]
         test_y = y_test[i] * 255
@@ -112,8 +135,9 @@ if __name__ == "__main__":
     # train = args["train"]
     # test = args["test"]
 
-    train = True
-    test = True
+    train = args.train
+    test = args.test
+    pred = args.predict
     input_img = Input((im_height, im_width, 1), name='img')
     model = unet.UNet(input_img)
 
@@ -130,3 +154,5 @@ if __name__ == "__main__":
         weight_path = save_path
         threshold = 0.9
         test_model(weight_path, threshold)
+    if pred:
+        predict(weight_path=path_weight, pred_path=path_pred)
