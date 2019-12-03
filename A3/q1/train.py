@@ -22,8 +22,19 @@ cwd = os.getcwd()
 im_width = 128
 im_height = 128
 border = 5
-path_train = cwd + '/people_data/Train/'
-path_test = cwd + '/people_data/Train/'
+parser = argparse.ArgumentParser(description='Process some integers.')
+parser.add_argument('--train-path',
+                    type=str,
+                    help="train path",
+                    default='./people_data/Train/')
+parser.add_argument('--test-path',
+                    type=str,
+                    default='./people_data/Test/',
+                    help='test path')
+args = parser.parse_args()
+
+path_train = args.train_path
+path_test = args.test_path
 
 
 def train_model(model, save_path=cwd + '/weights/weight.h5', learning_rate=0.01, momentum=0.9, loss="binary_crossentropy", path_train=path_train):
