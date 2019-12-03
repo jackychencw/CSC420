@@ -82,7 +82,7 @@ def train_model(model, save_path=save_path, learning_rate=0.01, momentum=0.9, lo
     return results
 
 
-def predict(weight_path, pred_path, out_path="./Output"):
+def predict(weight_path, pred_path, threshold=0.5, out_path="./Output"):
     pred_dataset = dataset.CatDataset(pred_path, im_width, im_height)
     X_pred, y_pred = pred_dataset.X, pred_dataset.Y
 
@@ -90,7 +90,8 @@ def predict(weight_path, pred_path, out_path="./Output"):
     preds = model.predict(X_pred, verbose=1)
     for i in range(preds.shape[0]):
         pred = preds[i]
-        pred = np.interp(pred, (pred.min(), pred.max()), (0, 255.0))
+        pred[pred > threshold] = 255.0
+        pred[pred < threshold] = 0
         save_img(f'{out_path}/{i}.jpg', pred)
 
 
