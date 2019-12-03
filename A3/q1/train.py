@@ -57,9 +57,9 @@ def test_model(weight_path, threshold, path_test=path_test):
         test_x = X_test[i] * 255
         test_pred[test_pred > threshold] = 255
         test_pred[test_pred <= threshold] = 0
-        save_img(f"{cwd}/Output/x/x_{}.jpg".format(i), test_x)
-        save_img(f"{cwd}/Output/y/y_{}.jpg".format(i), test_y)
-        save_img("./Output/pred/pred_{}.jpg".format(i), test_pred)
+        save_img(cwd + "/Output/x/x_{}.jpg".format(i), test_x)
+        save_img(cwd + "/Output/y/y_{}.jpg".format(i), test_y)
+        save_img(cwd + "/Output/pred/pred_{}.jpg".format(i), test_pred)
 
     model.compile(optimizer=SGD(), loss="binary_crossentropy",
                   metrics=["accuracy"])
