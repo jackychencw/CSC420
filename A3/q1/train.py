@@ -39,7 +39,7 @@ parser.add_argument('--loss',
 
 parser.add_argument('--save-path',
                     type=str,
-                    default='/weights/weight.h5',
+                    default='./weights/weight.h5',
                     help='loss function')
 args = parser.parse_args()
 
