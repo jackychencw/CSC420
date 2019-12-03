@@ -22,8 +22,8 @@ os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 im_width = 128
 im_height = 128
 border = 5
-path_train = './cat_data/Train/'
-path_test = './cat_data/Test/'
+path_train = './people_data/Train/'
+path_test = './people_data/Train/'
 
 
 def train_model(model, save_path='./weights/weight.h5', learning_rate=0.01, momentum=0.9, loss="binary_crossentropy", path_train=path_train):
@@ -88,7 +88,7 @@ if __name__ == "__main__":
     loss = "binary_crossentropy"
     save_path = './weights/weight_{}.h5'.format(loss)
     # loss = "binary_crossentropy"
-    
+
     # Train
     if train:
         train_model(model, save_path=save_path, loss=loss)

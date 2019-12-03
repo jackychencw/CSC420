@@ -16,24 +16,30 @@ class CatDataset(Dataset):
         self.Y = np.zeros((self.len, im_height, im_width, 1), dtype=np.float32)
 
         id = 0
-        for inputfilename in os.listdir(input_directory):
-            input_img = load_img(
-                os.path.join(input_directory, inputfilename), color_mode="grayscale")
+        count1 = 100
+        while count1 <= 600:
+            # for inputfilename in os.listdir(input_directory):
+            file_path = f'{input_directory}00{count1}.jpg'
+            input_img = load_img(file_path, color_mode="grayscale")
             if input_img is not None:
                 input_img = img_to_array(input_img)
                 input_img = resize(input_img, (int(im_height), int(im_width)))
                 new_input_img = torch.from_numpy(input_img)
                 self.X[id, ..., 0] = new_input_img.squeeze() / 255
+            count1 += 1
             id += 1
         id = 0
-        for maskfilename in os.listdir(mask_directory):
-            mask_img = load_img(
-                os.path.join(mask_directory, maskfilename), color_mode="grayscale")
+        count2 = 100
+        while count2 <= 600:
+            # for maskfilename in os.listdir(mask_directory):
+            file_path = f'{mask_directory}00{count2}.png'
+            mask_img = load_img(file_path, color_mode="grayscale")
             if mask_img is not None:
                 mask_img = img_to_array(mask_img)
                 mask_img = resize(mask_img, (int(im_height), int(im_width)))
                 new_mask_img = torch.from_numpy(mask_img)
                 self.Y[id] = new_mask_img / 255
+            count2 += 1
             id += 1
 
     def __len__(self):
