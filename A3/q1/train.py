@@ -83,7 +83,7 @@ def train_model(model, save_path=save_path, learning_rate=0.01, momentum=0.9, lo
 
 
 def predict(weight_path, pred_path, out_path="./Output/pred"):
-    pred_dataset = dataset.CatDataset(pred_path, 0, 706, im_width, im_height)
+    pred_dataset = dataset.CatDataset(pred_path, im_width, im_height)
     X_pred, y_pred = pred_dataset.X, pred_dataset.Y
 
     model.load_weights(weight_path)

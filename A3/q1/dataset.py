@@ -8,7 +8,7 @@ from skimage.transform import resize
 
 
 class CatDataset(Dataset):
-    def __init__(self, rootdirectory, start=100, limit=600, im_width=128, im_height=128):
+    def __init__(self, rootdirectory, im_width=128, im_height=128):
         input_directory = rootdirectory + 'input/'
         mask_directory = rootdirectory + 'mask/'
         self.len = len(os.listdir(input_directory))
@@ -16,10 +16,8 @@ class CatDataset(Dataset):
         self.Y = np.zeros((self.len, im_height, im_width, 1), dtype=np.float32)
 
         id = 0
-        count1 = start
-        while count1 <= limit:
-            # for inputfilename in os.listdir(input_directory):
-            file_path = f'{input_directory}00{count1}.jpg'
+        for inputfilename in os.listdir(input_directory):
+            file_path = input_directory + inputfilename
             input_img = load_img(file_path, color_mode="grayscale")
             print(input_img.shape)
             if input_img is not None:
@@ -30,11 +28,9 @@ class CatDataset(Dataset):
             count1 += 1
             id += 1
         id = 0
-        count2 = start
         if os.path.exists(mask_directory) and len(os.listdir(mask_directory)) != 0:
-            while count2 <= limit:
-                # for maskfilename in os.listdir(mask_directory):
-                file_path = f'{mask_directory}00{count2}.png'
+            for maskfilename in os.listdir(mask_directory):
+                file_path = mask_directory + count2
                 mask_img = load_img(file_path, color_mode="grayscale")
                 if mask_img is not None:
                     mask_img = img_to_array(mask_img)
