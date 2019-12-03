@@ -14,6 +14,7 @@ from skimage.io import imread, imshow, concatenate_images
 import argparse
 import numpy as np
 import matplotlib.pyplot as plt
+import cv2 as cv
 
 import tensorflow as tf
 import os
@@ -65,7 +66,7 @@ path_weight = save_path
 
 
 def train_model(model, save_path=save_path, learning_rate=0.01, momentum=0.9, loss="binary_crossentropy", path_train=path_train):
-    train_dataset = dataset.CatDataset(path_train, 128, 128)
+    train_dataset = dataset.CatDataset(path_train, im_width, im_height)
     # train_dataset.augment()
     X_train, y_train = train_dataset.X, train_dataset.Y
     model.compile(optimizer=SGD(learning_rate=learning_rate,
@@ -82,14 +83,15 @@ def train_model(model, save_path=save_path, learning_rate=0.01, momentum=0.9, lo
 
 
 def predict(weight_path, pred_path, out_path="./Output/pred"):
-    if not os.path.exists("./Output"):
-        os.mkdir("./Output")
-    for filename in os.listdir(pred_path):
-        file_path = pred_path + filename
-        out_file_path = out_path + filename
-        img = cv.imread(file_path, 0)
-        pred = model.predict(img, verbose=1)
-        cv.imwrite(out_file_path, pred)
+    pred_dataset = dataset.CatDataset(pred_path, im_width, im_height)
+    X_pred, y_pred = pred_dataset.X, pred_dataset.Y
+
+    model.load_weights(weight_path)
+    preds = model.predict(X_pred, verbose=1)
+    for i in range(preds.shape[0]):
+        pred = preds[i]
+        pred = np.interp(pred, (pred.min(), pred.max()), (0, 255.0))
+        save_img(f'{out_path}/{i},jpg', pred)
 
 
 def test_model(weight_path, threshold, path_test=path_test):
@@ -101,7 +103,7 @@ def test_model(weight_path, threshold, path_test=path_test):
         os.mkdir("./Output/y")
     if not os.path.exists("./Output/pred"):
         os.mkdir("./Output/pred")
-    test_dataset = dataset.CatDataset(path_test, 128, 128)
+    test_dataset = dataset.CatDataset(path_test, im_width, im_height)
     X_test, y_test = test_dataset.X, test_dataset.Y
     model.load_weights(weight_path)
     pred_test = model.predict(X_test, verbose=1)

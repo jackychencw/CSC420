@@ -30,17 +30,19 @@ class CatDataset(Dataset):
             id += 1
         id = 0
         count2 = 100
-        while count2 <= 600:
-            # for maskfilename in os.listdir(mask_directory):
-            file_path = f'{mask_directory}00{count2}.png'
-            mask_img = load_img(file_path, color_mode="grayscale")
-            if mask_img is not None:
-                mask_img = img_to_array(mask_img)
-                mask_img = resize(mask_img, (int(im_height), int(im_width)))
-                new_mask_img = torch.from_numpy(mask_img)
-                self.Y[id] = new_mask_img / 255
-            count2 += 1
-            id += 1
+        if os.path.exists(mask_directory) and len(os.listdir(mask_directory)) != 0:
+            while count2 <= 600:
+                # for maskfilename in os.listdir(mask_directory):
+                file_path = f'{mask_directory}00{count2}.png'
+                mask_img = load_img(file_path, color_mode="grayscale")
+                if mask_img is not None:
+                    mask_img = img_to_array(mask_img)
+                    mask_img = resize(
+                        mask_img, (int(im_height), int(im_width)))
+                    new_mask_img = torch.from_numpy(mask_img)
+                    self.Y[id] = new_mask_img / 255
+                count2 += 1
+                id += 1
 
     def __len__(self):
         return self.len
