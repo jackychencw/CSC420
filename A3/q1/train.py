@@ -51,7 +51,7 @@ loss = args.loss
 save_path = args.save_path
 
 
-def train_model(model, save_path=cwd + '/weights/weight.h5', learning_rate=0.01, momentum=0.9, loss="binary_crossentropy", path_train=path_train):
+def train_model(model, save_path=save_path, learning_rate=0.01, momentum=0.9, loss="binary_crossentropy", path_train=path_train):
     train_dataset = dataset.CatDataset(path_train, 128, 128)
     # train_dataset.augment()
     X_train, y_train = train_dataset.X, train_dataset.Y
