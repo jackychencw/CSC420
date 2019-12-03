@@ -90,7 +90,7 @@ def predict(weight_path, pred_path, threshold=0.2, out_path="./Output"):
     preds = model.predict(X_pred, verbose=1)
     for i in range(preds.shape[0]):
         pred = preds[i]
-        print(pn.where(pred > threshold))
+        print(np.where(pred > threshold))
         pred[pred > threshold] = 255.0
         pred[pred < threshold] = 0
         save_img(f'{out_path}/{i}.jpg', pred)
