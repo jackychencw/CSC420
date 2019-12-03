@@ -22,11 +22,11 @@ cwd = os.getcwd()
 im_width = 128
 im_height = 128
 border = 5
-path_train = f'{cwd}/people_data/Train/'
-path_test = f'{cwd}/people_data/Train/'
+path_train = cwd + '/people_data/Train/'
+path_test = cwd + '/people_data/Train/'
 
 
-def train_model(model, save_path=f'{cwd}/weights/weight.h5', learning_rate=0.01, momentum=0.9, loss="binary_crossentropy", path_train=path_train):
+def train_model(model, save_path=cwd + '/weights/weight.h5', learning_rate=0.01, momentum=0.9, loss="binary_crossentropy", path_train=path_train):
     train_dataset = dataset.CatDataset(path_train, 128, 128)
     # train_dataset.augment()
     X_train, y_train = train_dataset.X, train_dataset.Y
@@ -84,9 +84,9 @@ if __name__ == "__main__":
     input_img = Input((im_height, im_width, 1), name='img')
     model = unet.UNet(input_img)
 
-    # save_path=f'{cwd}/weights/weight.h5'
+    # save_path=cwd + '/weights/weight.h5'
     loss = "binary_crossentropy"
-    save_path = f'{cwd}/weights/weight_{}.h5'.format(loss)
+    save_path = cwd + '/weights/weight_{}.h5'.format(loss)
     # loss = "binary_crossentropy"
 
     # Train
