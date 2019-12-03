@@ -28,7 +28,7 @@ class CatDataset(Dataset):
         id = 0
         if os.path.exists(mask_directory) and len(os.listdir(mask_directory)) != 0:
             for maskfilename in os.listdir(mask_directory):
-                file_path = mask_directory + count2
+                file_path = mask_directory + maskfilename
                 mask_img = load_img(file_path, color_mode="grayscale")
                 if mask_img is not None:
                     mask_img = img_to_array(mask_img)
