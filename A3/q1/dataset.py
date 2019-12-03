@@ -21,6 +21,7 @@ class CatDataset(Dataset):
             # for inputfilename in os.listdir(input_directory):
             file_path = f'{input_directory}00{count1}.jpg'
             input_img = load_img(file_path, color_mode="grayscale")
+            print(input_img.shape)
             if input_img is not None:
                 input_img = img_to_array(input_img)
                 input_img = resize(input_img, (int(im_height), int(im_width)))
