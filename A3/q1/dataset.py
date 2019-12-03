@@ -24,7 +24,6 @@ class CatDataset(Dataset):
                 input_img = resize(input_img, (int(im_height), int(im_width)))
                 new_input_img = torch.from_numpy(input_img)
                 self.X[id, ..., 0] = new_input_img.squeeze() / 255
-            count1 += 1
             id += 1
         id = 0
         if os.path.exists(mask_directory) and len(os.listdir(mask_directory)) != 0:
@@ -37,7 +36,6 @@ class CatDataset(Dataset):
                         mask_img, (int(im_height), int(im_width)))
                     new_mask_img = torch.from_numpy(mask_img)
                     self.Y[id] = new_mask_img / 255
-                count2 += 1
                 id += 1
 
     def __len__(self):
