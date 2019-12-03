@@ -31,10 +31,24 @@ parser.add_argument('--test-path',
                     type=str,
                     default='./people_data/Test/',
                     help='test path')
+
+parser.add_argument('--loss',
+                    type=str,
+                    default='binary_crossentropy',
+                    help='loss function')
+
+parser.add_argument('--save-path',
+                    type=str,
+                    default='/weights/weight.h5',
+                    help='loss function')
 args = parser.parse_args()
 
+if not os.path.exists("./weights"):
+    os.mkdir("./weights")
 path_train = args.train_path
 path_test = args.test_path
+loss = args.loss
+save_path = args.save_path
 
 
 def train_model(model, save_path=cwd + '/weights/weight.h5', learning_rate=0.01, momentum=0.9, loss="binary_crossentropy", path_train=path_train):
@@ -55,6 +69,14 @@ def train_model(model, save_path=cwd + '/weights/weight.h5', learning_rate=0.01,
 
 
 def test_model(weight_path, threshold, path_test=path_test):
+    if not os.path.exists("./Output"):
+        os.mkdir("./Output")
+    if not os.path.exists("./Output/x"):
+        os.mkdir("./Output/x")
+    if not os.path.exists("./Output/y"):
+        os.mkdir("./Output/y")
+    if not os.path.exists("./Output/pred"):
+        os.mkdir("./Output/pred")
     threshold = threshold
     test_dataset = dataset.CatDataset(path_test, 128, 128)
     X_test, y_test = test_dataset.X, test_dataset.Y
@@ -68,9 +90,9 @@ def test_model(weight_path, threshold, path_test=path_test):
         test_x = X_test[i] * 255
         test_pred[test_pred > threshold] = 255
         test_pred[test_pred <= threshold] = 0
-        save_img(cwd + "/Output/x/x_{}.jpg".format(i), test_x)
-        save_img(cwd + "/Output/y/y_{}.jpg".format(i), test_y)
-        save_img(cwd + "/Output/pred/pred_{}.jpg".format(i), test_pred)
+        save_img("./Output/x/x_{}.jpg".format(i), test_x)
+        save_img("./Output/y/y_{}.jpg".format(i), test_y)
+        save_img("./Output/pred/pred_{}.jpg".format(i), test_pred)
 
     model.compile(optimizer=SGD(), loss="binary_crossentropy",
                   metrics=["accuracy"])
@@ -96,8 +118,7 @@ if __name__ == "__main__":
     model = unet.UNet(input_img)
 
     # save_path=cwd + '/weights/weight.h5'
-    loss = "binary_crossentropy"
-    save_path = cwd + '/weights/weight_{}.h5'.format(loss)
+
     # loss = "binary_crossentropy"
 
     # Train
